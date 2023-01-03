@@ -4,22 +4,9 @@ random() {
 	echo
 }
 
-function ifupName {
-    if [[ ! -d /sys/class/net/${1} ]]; then
-        printf 'No such interface: %s\n' "$1" >&2
-        return 1
-    else
-        [[ $(</sys/class/net/${1}/operstate) == up ]]
-    fi
-}
-NWINAME="enp1s0"
-if ifupName enp1s0; then
-    NWINAME="enp1s0"
-else
-    NWINAME="ens3"
-fi
-
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+main_interface=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+
 gen64() {
 	ip64() {
 		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
@@ -36,13 +23,19 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     mv /3proxy/3proxy-0.9.3/bin/3proxy /usr/local/etc/3proxy/bin/
-    wget https://raw.githubusercontent.com/xlandgroup/ipv4-ipv6-proxy/master/scripts/3proxy.service-Centos8 --output-document=/3proxy/3proxy-0.9.3/scripts/3proxy.service2
+    wget https://raw.githubusercontent.com/thuongtin/ipv4-ipv6-proxy/master/scripts/3proxy.service-Centos8 --output-document=/3proxy/3proxy-0.9.3/scripts/3proxy.service2
     cp /3proxy/3proxy-0.9.3/scripts/3proxy.service2 /usr/lib/systemd/system/3proxy.service
     systemctl link /usr/lib/systemd/system/3proxy.service
     systemctl daemon-reload
 #    systemctl enable 3proxy
     echo "* hard nofile 999999" >>  /etc/security/limits.conf
     echo "* soft nofile 999999" >>  /etc/security/limits.conf
+    echo "net.ipv6.conf.$main_interface.proxy_ndp=1" >> /etc/sysctl.conf
+    echo "net.ipv6.conf.all.proxy_ndp=1" >> /etc/sysctl.conf
+    echo "net.ipv6.conf.default.forwarding=1" >> /etc/sysctl.conf
+    echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+    echo "net.ipv6.ip_nonlocal_bind = 1" >> /etc/sysctl.conf
+    sysctl -p
     systemctl stop firewalld
     systemctl disable firewalld
 
@@ -63,9 +56,12 @@ setgid 65535
 setuid 65535
 stacksize 6291456 
 flush
-auth none
+auth strong
 
-$(awk -F "/" '{print "auth none\n" \
+users $(awk -F "/" 'BEGIN{ORS="";} {print $1 ":CL:" $2 " "}' ${WORKDATA})
+
+$(awk -F "/" '{print "auth strong\n" \
+"allow " $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
 "flush\n"}' ${WORKDATA})
 EOF
@@ -101,16 +97,9 @@ EOF
 }
 
 gen_ifconfig() {
-    if ifupName enp1s0; then
-        cat <<EOF
-            $(awk -F "/" '{print "ifconfig enp1s0 inet6 add " $5 "/64"}' ${WORKDATA})
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig '$main_interface' inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
-    else
-        cat <<EOF
-            $(awk -F "/" '{print "ifconfig ens3 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
-    fi
-    
 }
 echo "installing apps"
 yum -y install gcc net-tools bsdtar zip make >/dev/null
@@ -133,14 +122,15 @@ LAST_PORT=11000
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+echo NM_CONTROLLED="no" >> /etc/sysconfig/network-scripts/ifcfg-${main_interface}
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 systemctl start NetworkManager.service
-ifup ${NWINAME}
-bash ${WORKDIR}/boot_iptableseee.sh
+# ifup ${main_interface}
+bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 65535
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
