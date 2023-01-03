@@ -80,6 +80,7 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 echo "installing apps"
+apt-get update -y
 apt install -y gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
