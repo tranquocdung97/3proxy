@@ -113,8 +113,7 @@ EOF
     
 }
 echo "installing apps"
-apt-get update -y
-apt install -y gcc net-tools bsdtar zip make >/dev/null
+yum -y install gcc net-tools bsdtar zip make >/dev/null
 
 install_3proxy
 
