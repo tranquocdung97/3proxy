@@ -73,7 +73,7 @@ EOF
 }
 
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
+    cat <<EOF > proxy.txt 
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
@@ -135,13 +135,13 @@ FIRST_PORT=10000
 LAST_PORT=10001
 
 gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+gen_iptables > $WORKDIR/boot_iptables.sh
+gen_ifconfig > $WORKDIR/boot_ifconfig.sh
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
-cat >>/etc/rc.local <<EOF
+cat <<EOF > /etc/rc.local
 systemctl start NetworkManager.service
 ifup ${NWINAME}
 bash ${WORKDIR}/boot_iptableseee.sh
