@@ -4,22 +4,6 @@ random() {
 	echo
 }
 
-function ifupName {
-    if [[ ! -d /sys/class/net/${1} ]]; then
-        printf 'No such interface: %s\n' "$1" >&2
-        return 1
-    else
-        [[ $(</sys/class/net/${1}/operstate) == up ]]
-    fi
-}
-
-NWINAME="enp1s0"
-if ifupName enp1s0; then
-    NWINAME="enp1s0"
-else
-    NWINAME="ens3"
-fi
-
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
 	ip64() {
@@ -102,28 +86,23 @@ EOF
 }
 
 gen_ifconfig() {
-    if ifupName enp1s0; then
-        cat <<EOF
-            $(awk -F "/" '{print "ifconfig enp1s0 inet6 add " $5 "/64"}' ${WORKDATA})
+    cat <<EOF
+            $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
-    else
-        cat <<EOF
-            $(awk -F "/" '{print "ifconfig ens3 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
-    fi
     
 }
 
 echo "installing apps"
-sudo dnf --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos -y
-sudo dnf distro-sync -y
-sudo yum -y install gcc net-tools wget bsdtar zip make >/dev/null
+dnf --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos -y
+dnf distro-sync -y
+yum -y install gcc net-tools wget bsdtar zip make >/dev/null
 
 install_3proxy
 
 echo "working folder = /home/proxy-installer"
 WORKDIR="/home/proxy-installer"
 WORKDATA="${WORKDIR}/data.txt"
+NWINAME="eth0"
 mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
