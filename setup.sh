@@ -12,6 +12,7 @@ function ifupName {
         [[ $(</sys/class/net/${1}/operstate) == up ]]
     fi
 }
+
 NWINAME="enp1s0"
 if ifupName enp1s0; then
     NWINAME="enp1s0"
@@ -26,6 +27,7 @@ gen64() {
 	}
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
 install_3proxy() {
     echo "installing 3proxy"
     mkdir -p /3proxy
@@ -40,12 +42,11 @@ install_3proxy() {
     cp /3proxy/3proxy-0.9.3/scripts/3proxy.service2 /usr/lib/systemd/system/3proxy.service
     systemctl link /usr/lib/systemd/system/3proxy.service
     systemctl daemon-reload
-#    systemctl enable 3proxy
+    systemctl enable 3proxy
     echo "* hard nofile 999999" >>  /etc/security/limits.conf
     echo "* soft nofile 999999" >>  /etc/security/limits.conf
     systemctl stop firewalld
     systemctl disable firewalld
-
     cd $WORKDIR
 }
 
@@ -112,8 +113,11 @@ EOF
     fi
     
 }
+
 echo "installing apps"
-yum -y install gcc net-tools bsdtar zip make >/dev/null
+sudo dnf --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos -y
+sudo dnf distro-sync -y
+sudo yum -y install gcc net-tools wget bsdtar zip make >/dev/null
 
 install_3proxy
 
@@ -128,7 +132,7 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
 FIRST_PORT=10000
-LAST_PORT=11000
+LAST_PORT=10001
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
