@@ -84,6 +84,7 @@ upload_proxy() {
     echo "Password: ${PASS}"
 
 }
+
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "$(random)/$(random)/$IP4/$port/$(gen64 $IP6)"
@@ -131,7 +132,7 @@ chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
-cat >>/etc/rc.local <<EOF
+cat <<EOF > /etc/rc.local
 systemctl start NetworkManager.service
 # ifup ${main_interface}
 bash ${WORKDIR}/boot_iptables.sh
