@@ -4,7 +4,7 @@ Documentation=man:3proxy(1)
 After=network.target
 
 [Service]
-ExecStart=/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+ExecStart=/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 ExecReload=/bin/kill -SIGUSR1 $MAINPID
 KillMode=process
 Restart=on-failure
