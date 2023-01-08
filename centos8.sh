@@ -101,7 +101,11 @@ gen_ifconfig() {
 $(awk -F "/" '{print "ifconfig '$main_interface' inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
+
 echo "installing apps"
+dnf --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos -y
+dnf distro-sync -y
+yum upgrade -y
 yum -y install gcc net-tools wget firewalld bsdtar zip make >/dev/null
 
 install_3proxy
