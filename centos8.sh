@@ -13,6 +13,7 @@ gen64() {
 	}
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
 install_3proxy() {
     echo "installing 3proxy"
     mkdir -p /3proxy
@@ -67,10 +68,18 @@ $(awk -F "/" '{print "auth strong\n" \
 EOF
 }
 
+no_pass=false
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
+    if [ $no_pass ]
+    then
+        cat >proxy.txt <<EOL
+$(awk -F "/" '{print $3 ":" $4 "}' ${WORKDATA})
+EOL
+    else
+        cat >proxy.txt <<EOL
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
-EOF
+EOL
+    fi
 }
 
 upload_proxy() {
@@ -78,8 +87,13 @@ upload_proxy() {
     local PASS=$(random)
     zip --password $PASS proxy.zip proxy.txt
     URL=$(curl -F "file=@proxy.zip" https://file.io)
-
-    echo "Proxy is ready! Format IP:PORT:LOGIN:PASS"
+    
+    if [ $no_pass ]
+    then
+        echo "Proxy is ready! Format IP:PORT"
+    else
+        echo "Proxy is ready! Format IP:PORT:LOGIN:PASS"
+    fi
     echo "Download zip archive from: ${URL}"
     echo "Password: ${PASS}"
 
@@ -142,7 +156,7 @@ systemctl start NetworkManager.service
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 65535
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
 bash /etc/rc.local
